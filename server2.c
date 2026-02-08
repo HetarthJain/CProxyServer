@@ -43,14 +43,15 @@ typedef struct{
 	pthread_cond_t not_empty;
 } job_queue_t;
 // -------------------LRU-------------------------
-typedef struct cache_element
+typedef struct cache_element cache_element;
+ struct cache_element
 {
 	char *data;
 	int len;
 	char *url;
 	cache_element *next;
 	time_t lru_time_track;
-} cache_element;
+};
 // -----------------CACHE BUCKET------------------
 typedef struct{
 	cache_element *head;
