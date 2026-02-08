@@ -3,25 +3,28 @@ import threading
 import time
 
 PROXY_HOST = "127.0.0.1"
-PROXY_PORT = 8080       # change if needed
-TARGET_HOST = "example.com"
+PROXY_PORT = 8080
+
+TARGETS = [
+    "example.com",
+    # "neverssl.com",
+    "httpforever.com",
+    "info.cern.ch",
+    "cs.princeton.edu",
+]
+
 REQUEST_PATH = "/"
-NUM_CLIENTS = 50        # increase to stress harder
-TIMEOUT = 5
+NUM_CLIENTS = 5
+TIMEOUT = 30
 
 
-def send_request(client_id):
+def send_request(client_id, target_host):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(TIMEOUT)
         s.connect((PROXY_HOST, PROXY_PORT))
 
-        request = (
-            f"GET http://{TARGET_HOST}{REQUEST_PATH} HTTP/1.1\r\n"
-            f"Host: {TARGET_HOST}\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-        )
+        request = f"GET http://{target_host}{REQUEST_PATH} HTTP/1.0\r\n\r\n"
 
         s.sendall(request.encode())
 
@@ -32,9 +35,20 @@ def send_request(client_id):
                 break
             response += data
 
-        print(f"[Client {client_id}] Received {len(response)} bytes")
+        if not response:
+            print(f"[Client {client_id}] ❌ Empty response")
+            return
 
-        if b"HTTP/" not in response:
+        # Extract status line
+        status_line = response.split(b"\r\n", 1)[0]
+
+        print(
+            f"[Client {client_id}] {target_host} | "
+            f"{status_line.decode(errors='ignore')} | "
+            f"{len(response)} bytes"
+        )
+
+        if not status_line.startswith(b"HTTP/"):
             print(f"[Client {client_id}] ⚠️ Invalid HTTP response")
 
         s.close()
@@ -48,7 +62,8 @@ def main():
     start = time.time()
 
     for i in range(NUM_CLIENTS):
-        t = threading.Thread(target=send_request, args=(i,))
+        target = TARGETS[i % len(TARGETS)]
+        t = threading.Thread(target=send_request, args=(i, target))
         threads.append(t)
         t.start()
 

@@ -1,14 +1,36 @@
 CC=g++
-CFlags= -g -Wall
+CFLAGS=-g -Wall -Wextra
+SERVER_SRC=server2.c
+OBJDIR=obj
 
-all:proxy
-# i want to use diff server files for testing, so i will not specify the server file in the makefile, but instead i will compile it separately and link it with the parse.o file to create the proxy executable.
+# List of object files (prefixed with the object directory)
+OBJS = $(OBJDIR)/server.o $(OBJDIR)/parse.o $(OBJDIR)/resparse.o
 
-proxy: server.c
-	$(CC) $(CFLAGS) -o proxy.o -c server.c -lpthread
-	$(CC) $(CFLAGS) -o parse.o -c parse.c -lpthread
-	$(CC) $(CFLAGS) -o proxy parse.o proxy.o -lpthread
+all: $(OBJDIR) proxy
+
+# Create the object directory if it doesn't exist
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+# 1. Compile parser
+$(OBJDIR)/parse.o: parse.c parse.h | $(OBJDIR)
+	$(CC) $(CFLAGS) -c parse.c -o $@
+
+# 2. Compile response parser
+$(OBJDIR)/resparse.o: response_parse.c response_parse.h | $(OBJDIR)
+	$(CC) $(CFLAGS) -c response_parse.c -o $@
+
+# 3. Compile the specific server file
+$(OBJDIR)/server.o: $(SERVER_SRC) | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $(SERVER_SRC) -o $@
+
+# 4. Link everything together into the current directory
+proxy: $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o proxy -lpthread
+
 clean:
-	rm -f proxy*.o
+	rm -rf $(OBJDIR)
+	rm -f proxy proxy2
+
 tar:
-	tar -cvzf ass1.tgz server.c README Makefile parse.c parse.h
+	tar -cvzf ass1.tgz $(SERVER_SRC) README Makefile parse.c parse.h response_parse.c

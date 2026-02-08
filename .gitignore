@@ -2,3 +2,4 @@ proxy*
 *.o
 notes*
 .vscode
+obj
